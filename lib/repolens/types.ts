@@ -8,6 +8,7 @@ export type FileNode = {
     name: string;
     folder: string;
     kind: string;
+    lang?: string;
     size: number;
     lines: number;
     imports: number;
@@ -47,6 +48,7 @@ export type Report = {
     lines: number;
     duplicateBytes: number;
     packages: string[];
+    languages: { lang: string; label: string; files: number; lines: number }[];
     duration: number;
     limitations: string[];
 };

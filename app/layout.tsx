@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "RepoLens — See your code, connected",
-  description: "Explore JavaScript and TypeScript projects as an interactive dependency map. Find cycles and trace change impact with private, browser-only analysis.",
+  description: "Explore projects in JavaScript, TypeScript, Python, Java, Go, Rust, C/C++, C# and more as an interactive dependency map. Find cycles and trace change impact with private, local analysis.",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",

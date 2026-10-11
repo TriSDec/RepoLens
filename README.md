@@ -1,70 +1,93 @@
 # RepoLens
 
-An interactive dependency explorer for small JavaScript and TypeScript projects. Source files are parsed locally in a disposable browser worker. There is no source upload endpoint, project database, or AI service.
+See how any codebase fits together. RepoLens turns a project into an interactive dependency map and a short list of structural findings — circular dependencies, broken imports, duplicate files, files nothing seems to use, and "if I change this, what breaks?" impact tracing.
 
-## Run locally
+It works on **JavaScript / TypeScript** (including Vue, Svelte and Astro), **Python, Java, Kotlin, Scala, Go, Rust, C / C++, C#, Ruby, PHP, Dart and Swift**, and mixed-language repositories. Everything is analyzed on your machine — nothing is uploaded.
 
-Node 22.13+ and pnpm are required. Install the locked dependencies, build the analyzer, and start the app:
+## Quick start
 
-```sh
-pnpm install --frozen-lockfile
-pnpm analyzer:build
-pnpm dev
-```
-
-## Deploy to Vercel
-
-Sign into Vercel with the account/email that should own this project. Import this folder through a Git repository, or run `npx vercel` from this folder and select the intended account/team. Select the Next.js framework preset; the build command is `pnpm build`. No environment variables or source-upload storage are needed.
-
-This edition uses native Next.js for development, production builds, and hosting. Vercel account ownership is separate from the email used in ChatGPT. The original ChatGPT-hosted site is a separate deployment. Configure the Vercel project's audience before sharing its URL; the original site's private access policy does not transfer.
+**Command line** (no browser needed):
 
 ```sh
-pnpm test
-pnpm typecheck
-pnpm build
+npm install
+node bin/repolens.mjs /path/to/project            # summary in the terminal
+node bin/repolens.mjs . --md report.md            # shareable Markdown report
+node bin/repolens.mjs . --json report.json        # full machine-readable report
+node bin/repolens.mjs . --impact src/db/client.ts # what is affected if I change this file?
+node bin/repolens.mjs . --fail-on cycle           # exit 1 if a cycle exists (CI)
 ```
 
-## What works
+`npm link` (or `npx .`) makes the `repolens` command available everywhere. The folder's `.gitignore` is respected by default (`--no-gitignore` to disable). Run `repolens --help` for all options.
 
-- Folder selection and ZIP import; drag and drop for ZIP files.
-- Searchable file explorer and draggable dependency diagram with zoom, pan, fit, focus, and minimap.
-- Direct imports, reverse dependencies, and transitive change impact.
-- Literal ES imports, reexports, CommonJS `require`, dynamic literal imports, and explicit type-only edges.
-- Relative imports, directory indexes, common JavaScript-to-TypeScript extension resolution, and directly declared tsconfig/jsconfig aliases.
-- Parse errors, unresolved local imports, runtime dependency cycles, exact duplicate source files, repeated imports, large files/assets, and review suggestions for disconnected files or production packages with no traced import.
-- JSON report export; reports contain paths and findings, never full source files.
-- A 23-file sample project with an intentional cycle, duplicate implementation, and legacy branch.
+**Web app** (interactive map):
 
-## Architecture
+```sh
+npm install
+npm run dev        # http://localhost:3000
+```
 
-`app/page.tsx` owns the transient UI state. `components/repolens-graph.tsx` implements the SVG canvas, camera, node dragging, keyboard selection, and touch gestures.
+Choose a folder or drop a ZIP. The sample project loads automatically so you can explore before opening your own code.
 
-`lib/repolens/input.ts` validates project paths, filters generated and common sensitive files before reading, and limits archive expansion. `analyzer.worker.ts` runs collection and analysis in a separate browser thread. `analyze.ts` walks TypeScript syntax trees, builds a directed graph, finds strongly connected components with Tarjan's algorithm, and computes a layout. `types.ts` contains breadth-first dependency and impact tracing.
+## What you get
 
-The analyzer worker is bundled separately into `public/worker/analyzer.js`; rebuild it after changing analyzer source. The hosted server only delivers the app and its assets.
+- A draggable dependency diagram with zoom, pan, fit, focus and minimap, plus a searchable file explorer.
+- Direct imports, reverse dependencies and transitive **change impact** for any file.
+- Findings with severity and confidence: runtime cycles, unresolved local imports, syntax errors (JS/TS), duplicate files, repeated imports, large files, high-coupling modules, files outside known entry points, and production packages with no traced import.
+- Per-language breakdown, external-package list, and JSON or Markdown export (paths and findings only — never source text).
 
-## Privacy and security design
+## How each language is understood
 
-- The app does not submit source, paths, or findings to a server or model, and does not use project localStorage or IndexedDB.
-- Imported code is treated as text. No eval, HTML rendering, package installation, or project command execution.
-- No remote fonts, client analytics, third-party scripts, or externally hosted parser code.
-- Production Content Security Policy disallows fetch/XHR/WebSocket connections, objects, form submission, and embedding. Framework hydration requires inline scripts; source text is never inserted as HTML.
-- The worker is terminated after analysis or cancellation, and a 40-second watchdog bounds analysis time.
-- Common `.env` and key files, dependency/build folders, lockfiles, and source maps are skipped. Secrets inside ordinary source files cannot be identified automatically, but those files remain local too.
-- Maximum 1,000 included files; 25 MiB readable content; 1 MiB per text file. ZIPs are limited to 25 MiB compressed and 50 MiB declared expansion. Decoded text has a separate actual-byte bound. At most 15,000 graph edges and 5,000 findings are returned.
-- Absolute paths, path traversal, control characters, and duplicate paths are rejected. Invalid ZIP formats fail closed.
-- The site host may still see routine requests for the application and assets. Browser extensions, a compromised device, and a compromised app delivery origin are outside this protection.
+| Language | Imports recognised | Resolution |
+| --- | --- | --- |
+| JS / TS / JSX / TSX / Vue / Svelte / Astro | `import`, `export … from`, `require`, literal `import()`, type-only edges | Relative paths, directory indexes, tsconfig/jsconfig `paths` and `baseUrl`; parsed with the TypeScript compiler |
+| Python | `import`, `from … import` (absolute and relative) | Modules, packages, `__init__.py`, submodules; stdlib ignored |
+| Java / Kotlin / Scala | `import` (incl. static and wildcard) | Matched to the `package` declaration of each file |
+| Go | `import` blocks | `go.mod` module path → package directory |
+| Rust | `mod`, `use` (incl. braced lists), `extern crate` | `crate::`, `self::`, `super::`, `foo.rs` / `foo/mod.rs` |
+| C / C++ | `#include "…"` | Relative, common include dirs, unique path-suffix match |
+| C# | `using` | Matched to `namespace` declarations |
+| Ruby | `require`, `require_relative`, `load` | Relative and `lib/` / `app/` lookup |
+| PHP | `require`/`include`, `use` | Relative paths and namespace-to-path matching |
+| Dart | `import`, `export`, `part` | Relative and `package:` of the local pubspec |
+| Swift | `import` | Module names listed as external packages |
 
-## Important analysis limits
+Non-JS/TS languages use comment-aware pattern matching rather than a full parser. In Java, Kotlin, Scala, Go and C#, files in the same package/namespace see each other without imports, so those links are not drawn (but are used when deciding whether a file is reachable).
 
-This is a structural static analyzer, not a type checker, vulnerability scanner, profiler, or energy meter. A parseable project may still fail at runtime. Cycles are real graph relationships, not necessarily bugs. A file outside recognized entry paths or package without a literal import is a review suggestion, not proof that it can be deleted.
+## Limits and honest caveats
 
-Computed imports, package export/import maps, inherited tsconfig aliases, CSS import graphs, and custom framework resolution are not fully modeled. Disk bytes are not bundle bytes or proven performance savings. Only exact textual duplicate code is detected, not semantically equivalent code. Type imports are visible but excluded from runtime cycle detection.
+This is a structural static analyzer — not a type checker, vulnerability scanner or profiler. A cycle is a real graph relationship, not necessarily a bug. "Outside known entry paths" and "package with no traced import" are review prompts, not proof that something can be deleted. Computed imports, reflection, dependency injection, package export maps, macros, build-generated files and custom resolvers are not modelled. Only exact textual duplicates are detected.
 
-The analyzer is scoped to JS/TS/JSX/TSX and their common module extensions. Other assets are represented by metadata only.
+Browser limits: 1,000 included files, 25 MiB of readable content, 1 MiB per text file; ZIPs 25 MiB compressed / 50 MiB expanded. The CLI default is 5,000 files (`--max-files`).
 
-## Validation
+## Privacy
 
-`pnpm test` checks syntax-aware import extraction, type-only cycle exclusion, alias/index resolution, parse diagnostics, transitive influence, secret exclusion before reads, unsafe archive paths, ZIP collection, expansion limits, file count limits, and a full 1,000-file fixture.
+- The web app parses files in a disposable browser worker. It never sends source, paths or findings to a server, and uses no analytics, remote fonts or third-party scripts. The production Content Security Policy forbids network connections from the page.
+- The CLI reads files locally and writes only the outputs you request.
+- Imported code is treated as text: nothing is executed, rendered as HTML or installed.
+- Dependency/build folders (`node_modules`, `.venv`, `target`, `dist`, …), lockfiles, source maps, minified files, hidden files and common secret files (`.env`, `*.pem`, keys, …) are skipped before reading. Absolute paths, path traversal and unsafe ZIP entries are rejected.
 
-The application and analyzer are intentionally split so algorithm correctness can be tested separately from interaction behavior.
+## Deploy
+
+It is a standard Next.js app: `npm run build && npm start`, or import the repository into Vercel (framework preset: Next.js, build command `npm run build`). No environment variables or storage are needed.
+
+## Development
+
+```sh
+npm test            # analyzer + language + ZIP/limits tests
+npm run typecheck
+npm run analyzer:build   # rebuild public/worker/analyzer.js (also run by dev/build)
+npm run cli:build        # rebuild dist-cli/cli.mjs
+```
+
+```
+app/                     Next.js UI (page.tsx holds the workspace state)
+components/              graph canvas and the few shadcn/ui primitives in use
+lib/repolens/
+  analyze.ts             graph, cycles (Tarjan), findings, layout
+  languages.ts           per-language import extraction and resolution
+  input.ts               folder/ZIP collection, exclusions, limits
+  report.ts              Markdown export
+  cli.ts                 command-line entry (bundled to dist-cli/)
+  analyzer.worker.ts     browser worker entry (bundled to public/worker/)
+tests/run.mjs            test suite
+```

@@ -1,25 +1,27 @@
 import { Unzip, UnzipInflate } from 'fflate';
 import { LIMITS, type InputFile } from './types';
+import { languageOf } from './languages';
 export function safePath(raw: string) {
     const p = raw.replaceAll('\\', '/');
     if (!p || p.length > 500 || p.startsWith('/') || /^[a-z]:/i.test(p) || /[\x00-\x1f\x7f]/.test(p) || p.split('/').includes('..'))
         throw new Error('This project contains an unsafe or excessively long file path.');
     return p.replace(/^\.\//, '');
 }
+const IGNORED_DIRS = ['node_modules', '.git', '.next', '.nuxt', '.svelte-kit', '.output', 'dist', 'build', 'out', 'coverage', '.cache', '.turbo', 'vendor', '__MACOSX', '__pycache__', '.venv', 'venv', 'site-packages', '.tox', '.mypy_cache', '.pytest_cache', '.ruff_cache', 'target', 'obj', '.gradle', 'Pods', 'DerivedData', '.dart_tool', '.idea', '.vs', '.vscode'];
 export function exclusion(p: string): string | null {
     const parts = p.split('/'), name = parts.at(-1) || '';
-    if (parts.some(s => ['node_modules', '.git', '.next', '.nuxt', 'dist', 'build', 'coverage', '.cache', '.turbo', 'vendor', '__MACOSX'].includes(s)))
+    if (parts.some(s => IGNORED_DIRS.includes(s)))
         return 'Dependencies & generated files';
     if (/^(\.env($|\.)|\.npmrc$|\.pypirc$|\.netrc$|id_rsa|id_ed25519|credentials|secrets\.)/i.test(name) || /\.(pem|key|p12|pfx|keystore)$/i.test(name))
         return 'Sensitive files';
-    if (/^(package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?)$/.test(name) || /\.map$/.test(name))
+    if (/^(package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?|Cargo\.lock|poetry\.lock|Pipfile\.lock|composer\.lock|Gemfile\.lock|go\.sum|pubspec\.lock|packages\.lock\.json)$/.test(name) || /\.(map|min\.js|min\.css)$/.test(name))
         return 'Lockfiles & source maps';
     if (name.startsWith('.'))
         return 'Hidden files';
     return null;
 }
-export function isCode(p: string) { return /\.[cm]?[jt]sx?$/i.test(p); }
-export function isText(p: string) { return isCode(p) || /\.(json|css|scss|less|html|md|txt|ya?ml)$/i.test(p); }
+export function isCode(p: string) { return languageOf(p) !== null; }
+export function isText(p: string) { return isCode(p) || /\.(json|css|scss|less|html|md|txt|ya?ml|toml|xml|gradle|properties|cfg|ini|csproj|mod)$/i.test(p); }
 export function stripRoot(files: InputFile[]) {
     if (!files.length)
         return files;

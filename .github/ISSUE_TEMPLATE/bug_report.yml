@@ -1,0 +1,26 @@
+name: Bug or wrong result
+description: Something crashed, hung, or the map or a finding is wrong
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please **do not paste secrets or private code**. Security problems go through [private reporting](https://github.com/TriSDec/RepoLens/security/advisories/new), not here.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations: { required: true }
+  - type: textarea
+    id: repro
+    attributes:
+      label: Smallest example
+      description: A tiny snippet or folder layout that shows it (for a wrong finding or missing link, the import line is ideal).
+  - type: input
+    id: env
+    attributes:
+      label: Browser and version, or CLI and Node version
+  - type: input
+    id: size
+    attributes:
+      label: Project size (approximate files)

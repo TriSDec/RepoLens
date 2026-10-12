@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     openGraph: { type: 'website', siteName: 'RepoLens', title: TITLE, description: DESCRIPTION },
     twitter: { card: 'summary_large_image', title: TITLE, description: DESCRIPTION },
     alternates: { canonical: '/' },
-    authors: [{ name: 'Tristan DeClercq', url: 'https://github.com/TriSDec' }],
+    authors: [{ name: 'Tristan Declercq', url: 'https://github.com/TriSDec' }],
     category: 'developer tools',
     referrer: 'no-referrer',
     robots: { index: true, follow: true },
@@ -37,7 +37,7 @@ export const viewport: Viewport = {
 const JSON_LD = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'SoftwareApplication', name: 'RepoLens', applicationCategory: 'DeveloperApplication',
     operatingSystem: 'Any (web browser)', description: DESCRIPTION, url: SITE, license: 'https://opensource.org/licenses/MIT',
-    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' }, author: { '@type': 'Person', name: 'Tristan DeClercq' },
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' }, author: { '@type': 'Person', name: 'Tristan Declercq' },
 }).replace(/</g, '\\u003c');
 
 // Runs before first paint so the chosen theme never flashes. A constant string, no user data involved.

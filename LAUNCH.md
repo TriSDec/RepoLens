@@ -36,7 +36,7 @@ You should see `connect-src 'none'`, a `nonce-…`, `frame-ancestors 'none'` and
 - **Name check.** Search the USPTO/EUIPO databases and the web for "RepoLens" in software before investing in the brand. If a conflict exists, a rename is a one-line search-and-replace plus the domain.
 - **Operator identity.** Some countries (for example Germany, with its *Impressum*) require a named contact on commercial sites. This is a free, non-commercial tool, but if you add ads, a paid tier or a company, add that page. The hosting provider's own privacy terms also apply to server logs.
 - **Hosting provider terms.** Make sure the plan you pick allows public production use.
-- **Copyright holder.** `LICENSE` says "Tristan DeClercq". Change it if you publish under a company or alias.
+- **Copyright holder.** `LICENSE` says "Tristan Declercq". Change it if you publish under a company or alias.
 - **Developer disclaimer.** If you ever offer support or SLAs, get proper legal advice; these documents are plain-language templates, not legal advice.
 
 ## 3. Known residual advisory

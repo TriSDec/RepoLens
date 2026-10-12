@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Interactive dependency map and health report for software projects in many languages. Runs entirely on your machine.",
   "license": "MIT",
-  "author": "Tristan DeClercq",
+  "author": "Tristan Declercq",
   "homepage": "https://github.com/TriSDec/RepoLens#readme",
   "repository": {
     "type": "git",

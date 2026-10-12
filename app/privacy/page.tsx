@@ -57,6 +57,11 @@ export default function Privacy() {
                     <li>The secret and risky-code checks are pattern-based. They can miss real problems and flag harmless code. RepoLens is not a security audit.</li>
                 </ul>
 
+                <h2>Data protection (GDPR, UK GDPR, CCPA)</h2>
+                <p>RepoLens itself does not collect, store or sell personal data: there is no account, no form, no cookie, no analytics and no third-party script, and your project files never reach the operator. Because the app collects nothing, there is nothing to access, correct, export or delete, and no consent banner is needed (the one stored preference, your theme, is a strictly necessary setting that stays on your device).</p>
+                <p>The only data a visit can generate is the ordinary request log kept by whichever company hosts the site (typically IP address, time, page and browser). That processing is the host&apos;s, is limited to running and securing the service, and is governed by the host&apos;s own policy. If you run your own copy, you control that entirely. Questions can be raised through <a href="https://github.com/TriSDec/RepoLens/issues" rel="noopener noreferrer">GitHub issues</a>. The site is not directed at children.</p>
+                <p>Changes to this page are recorded in the public <a href="https://github.com/TriSDec/RepoLens/commits/main/app/privacy/page.tsx" rel="noopener noreferrer">commit history</a>. See also the <a href="/terms">terms of use</a> and <a href="/licenses">open-source licences</a>.</p>
+
                 <h2>Reporting a vulnerability</h2>
                 <p>If you find a security problem, please report it privately through <a href="https://github.com/TriSDec/RepoLens/security/advisories/new" rel="noopener noreferrer">GitHub’s private vulnerability reporting</a> rather than a public issue, and give us a reasonable chance to fix it first.</p>
             </main>

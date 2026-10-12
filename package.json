@@ -2,6 +2,26 @@
   "name": "repolens",
   "version": "1.0.0",
   "description": "Interactive dependency map and health report for software projects in many languages. Runs entirely on your machine.",
+  "license": "MIT",
+  "author": "Tristan DeClercq",
+  "homepage": "https://github.com/TriSDec/RepoLens#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TriSDec/RepoLens.git"
+  },
+  "bugs": {
+    "url": "https://github.com/TriSDec/RepoLens/issues"
+  },
+  "keywords": [
+    "dependency-graph",
+    "code-visualization",
+    "circular-dependencies",
+    "static-analysis",
+    "secret-scanning",
+    "architecture",
+    "monorepo",
+    "cli"
+  ],
   "private": true,
   "type": "module",
   "engines": {
@@ -21,7 +41,8 @@
     "cli:build": "node scripts/build-cli.mjs",
     "repolens": "node bin/repolens.mjs",
     "sample:build": "node scripts/build-lib.mjs && node scripts/build-sample.mjs",
-    "prestart": "node scripts/ensure-worker.mjs"
+    "prestart": "node scripts/ensure-worker.mjs",
+    "notices": "node scripts/gen-notices.mjs"
   },
   "dependencies": {
     "fflate": "0.8.3",

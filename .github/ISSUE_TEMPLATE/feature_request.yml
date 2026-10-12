@@ -1,0 +1,14 @@
+name: Idea or language request
+description: Suggest a feature, a finding, or support for a language or framework
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like RepoLens to do?
+      description: Describe the problem you are trying to solve, not only the solution.
+    validations: { required: true }
+  - type: textarea
+    id: example
+    attributes:
+      label: Example project or import style

@@ -15,8 +15,8 @@ export function SiteFooter() {
     return (
         <footer className="site-footer">
             <a className="wordmark" href="/"><Mark size={20} /><span>RepoLens</span></a>
-            <nav aria-label="Footer"><a href="/docs">Docs</a><a href="/privacy">Privacy &amp; security</a><a href="https://github.com/TriSDec/RepoLens" rel="noopener noreferrer">Source on GitHub</a></nav>
-            <p>Structural analysis only. RepoLens does not run your code, replace your compiler or tests, or constitute a security audit.</p>
+            <nav aria-label="Footer"><a href="/docs">Docs</a><a href="/privacy">Privacy &amp; security</a><a href="/terms">Terms</a><a href="/licenses">Licences</a><a href="https://github.com/TriSDec/RepoLens" rel="noopener noreferrer">Source on GitHub</a></nav>
+            <p>© 2026 Tristan DeClercq. MIT-licensed. Structural analysis only. RepoLens does not run your code, replace your compiler or tests, or constitute a security audit.</p>
         </footer>
     );
 }

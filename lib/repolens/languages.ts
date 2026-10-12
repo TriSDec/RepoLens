@@ -60,12 +60,18 @@ const CLIKE: Syntax = { line: ['//'], block: [['/*', '*/']], quotes: '"\'' };
 /** Blank out comments (and Python docstrings) while keeping offsets and line breaks intact. */
 export function stripComments(text: string, lang: Lang): string {
     const syn = SYNTAX[lang] || CLIKE;
-    const out = text.split('');
-    const blank = (from: number, to: number) => { for (let k = from; k < to && k < out.length; k++) if (out[k] !== '\n') out[k] = ' '; };
-    let i = 0;
+    // Only a handful of characters can start a comment or string; everything else is skipped without any work.
+    const hot = new Set<string>(syn.quotes);
+    for (const l of syn.line ?? []) hot.add(l[0]);
+    for (const [open] of syn.block ?? []) hot.add(open[0]);
+    const out: string[] = [];
+    let last = 0;
+    const blank = (from: number, to: number) => { out.push(text.slice(last, from), text.slice(from, to).replace(/[^\n]/g, ' ')); last = to; };
     const n = text.length;
+    let i = 0;
     while (i < n) {
         const ch = text[i];
+        if (!hot.has(ch)) { i++; continue; }
         const block = syn.block?.find(([open]) => text.startsWith(open, i) && (open !== '=begin' || i === 0 || text[i - 1] === '\n'));
         if (block) {
             const end = text.indexOf(block[1], i + block[0].length);
@@ -87,10 +93,12 @@ export function stripComments(text: string, lang: Lang): string {
             let k = i + 1;
             while (k < n && text[k] !== ch && text[k] !== '\n') k += text[k] === '\\' ? 2 : 1;
             // Rust/C-family character literals and lifetimes never span lines; a stray quote stops at the newline.
-            i = ch === '`' && text[k] === '`' ? k + 1 : text[k] === ch ? k + 1 : k; continue;
+            i = text[k] === ch ? k + 1 : k; continue;
         }
         i++;
     }
+    if (!out.length) return text;
+    out.push(text.slice(last));
     return out.join('');
 }
 
@@ -152,8 +160,9 @@ function swiftImports(raw: string): RawImport[] {
 }
 
 /** Expand `a::{b, c::d}` into flat paths. Pure text; handles nesting. */
-export function expandRustUse(src: string): string[] {
+export function expandRustUse(src: string, nest = 0): string[] {
     src = src.trim();
+    if (nest > 8 || src.length > 2000) return [src.split('{')[0].replace(/::$/, '').slice(0, 300)]; // absurd nesting: keep the prefix only
     const brace = src.indexOf('{');
     if (brace < 0) return [src.replace(/::\*$/, '').replace(/ as \w+$/, '').trim()];
     const prefix = src.slice(0, brace).trim().replace(/::$/, '');
@@ -164,7 +173,7 @@ export function expandRustUse(src: string): string[] {
         else if (c === '}') { depth--; if (depth === 0) { parts.push(src.slice(start, i)); break; } }
         else if (c === ',' && depth === 1) { parts.push(src.slice(start, i)); start = i + 1; }
     }
-    return parts.map(p => p.trim()).filter(Boolean).flatMap(p => expandRustUse(p === 'self' ? prefix : prefix ? prefix + '::' + p : p));
+    return parts.map(p => p.trim()).filter(Boolean).flatMap(p => expandRustUse(p === "self" ? prefix : prefix ? prefix + "::" + p : p, nest + 1));
 }
 
 // ------------------------------------------------------------------ resolution
@@ -174,6 +183,7 @@ const SWIFT_BUILTIN = new Set('Foundation UIKit SwiftUI AppKit Combine CoreData 
 const RUST_BUILTIN = new Set(['std', 'core', 'alloc', 'proc_macro', 'test']);
 const JVM_BUILTIN = /^(java|javax|jdk|kotlin|kotlinx\.coroutines|scala|sun|android|androidx)\./;
 
+const MAX_SPEC = 300;
 const dirOf = (p: string) => p.slice(0, Math.max(0, p.lastIndexOf('/')));
 const baseOf = (p: string) => p.slice(p.lastIndexOf('/') + 1);
 const stemOf = (p: string) => baseOf(p).replace(/\.[^.]+$/, '');
@@ -189,6 +199,8 @@ export type LanguageContext = {
 
 export function createLanguageContext(files: { path: string; content?: string }[]): LanguageContext {
     const paths = new Set(files.map(f => f.path));
+    const dirs = new Set<string>(); // every directory that contains an included file (for namespace packages)
+    for (const p of paths) for (let d = dirOf(p); d; d = dirOf(d)) dirs.add(d);
     const byBase = new Map<string, string[]>(); // lowercase basename -> paths, for suffix lookups
     for (const p of paths) { const k = baseOf(p).toLowerCase(); const l = byBase.get(k); if (l) l.push(p); else byBase.set(k, [p]); }
 
@@ -246,6 +258,10 @@ export function createLanguageContext(files: { path: string; content?: string }[
         const top = mod.split('.')[0];
         for (const root of pyRoots(from)) {
             const found = pyModule(root, mod);
+            if (!found && mod && dirs.has(join(root, mod.replace(/\./g, '/')))) { // PEP 420 namespace package: no __init__.py
+                const subs = (imp.names || []).map(n => pyModule(root, mod + '.' + n)).filter((x): x is string => !!x);
+                return { targets: [...new Set(subs)] };
+            }
             if (found) {
                 const targets = new Set([found]);
                 for (const n of imp.names || []) { const sub = pyModule(root, mod + '.' + n); if (sub) { targets.add(sub); if (/__init__\.pyi?$/.test(found)) targets.delete(found); } }
@@ -323,11 +339,12 @@ export function createLanguageContext(files: { path: string; content?: string }[
 
     // C / C++ ---------------------------------------------------------------------
     const INCLUDE_DIRS = ['', 'include', 'inc', 'src', 'lib'];
+const STD_HEADERS = new Set('assert.h complex.h ctype.h errno.h fenv.h float.h inttypes.h iso646.h limits.h locale.h math.h setjmp.h signal.h stdalign.h stdarg.h stdatomic.h stdbool.h stddef.h stdint.h stdio.h stdlib.h string.h tgmath.h threads.h time.h uchar.h wchar.h wctype.h unistd.h pthread.h sys/types.h sys/stat.h windows.h'.split(' '));
     const resolveInclude = (from: string, spec: string): Resolution => {
         const angle = spec[0] === '<', name = spec.slice(1);
         const found = (!angle && exists(join(dirOf(from), name))) || firstExisting(INCLUDE_DIRS.map(d => join(d, name))) || (name.includes('/') || !angle ? suffixMatch(name, from) : undefined);
         if (found && found !== from) return { targets: [found] };
-        return angle ? { targets: [] } : { targets: [], unresolved: true };
+        return angle || STD_HEADERS.has(name) || !name.includes('.') ? { targets: [] } : { targets: [], unresolved: true };
     };
 
     // Ruby / PHP / Dart ------------------------------------------------------------
@@ -368,6 +385,7 @@ export function createLanguageContext(files: { path: string; content?: string }[
             return lang === 'swift' ? swiftImports(content) : extractImports(lang, content);
         },
         resolve(from, imp) {
+            if (imp.spec.length > MAX_SPEC) return { targets: [] }; // pathological input; also keeps every resolver linear-time
             switch (languageOf(from)) {
                 case 'python': return resolvePython(from, imp);
                 case 'java': case 'kotlin': case 'scala': return resolveJvm(imp.spec);
